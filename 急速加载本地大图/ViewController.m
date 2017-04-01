@@ -23,7 +23,7 @@ UIImage *getImg(){
 static NSString * IDENTIFIER = @"IDENTIFIER";
 static CGFloat CELL_HEIGHT = 165;
 
-typedef void(^RunloopBlock)(void);
+typedef BOOL(^RunloopBlock)(void);
 
 @interface ViewController ()<UITableViewDataSource,UITableViewDelegate>
 
@@ -35,6 +35,9 @@ typedef void(^RunloopBlock)(void);
 @property(nonatomic,strong)NSMutableArray * tasks;
 /** 最大任务s */
 @property(assign,nonatomic)NSUInteger maxQueueLength;
+
+/** 任务标记  */
+@property(nonatomic,strong)NSMutableArray * tasksKeys;
 
 @end
 
@@ -98,22 +101,33 @@ static void Callback(CFRunLoopObserverRef observer, CFRunLoopActivity activity, 
     if (vc.tasks.count == 0) {
         return;
     }
+    BOOL result = NO;
+    while (result == NO && vc.tasks.count ) {
+        
+        //取出任务
+        RunloopBlock unit = vc.tasks.firstObject;
+        //执行任务
+         result = unit();  //YES.所以说只执行了一次。
+        //干掉第一个任务
+        [vc.tasks removeObjectAtIndex:0];
+        //干掉标示
+        [vc.tasksKeys removeObjectAtIndex:0];
+        
+    }
     
-    //取出任务
-    RunloopBlock unit = vc.tasks.firstObject;
-    //执行任务
-     unit();
-    //干掉第一个任务
-    [vc.tasks removeObjectAtIndex:0];
-
 }
 
 
-- (void)addTask:(RunloopBlock)unit{
+-(void)addTask:(RunloopBlock)unit withKey:(id)key{
     
     [self.tasks addObject:unit];
+    [self.tasksKeys addObject:key];
+
+   //保证之前没有显示出来的任务。不再浪费时间加载
     if (self.tasks.count > self.maxQueueLength ) {
         [self.tasks removeObjectAtIndex:0];
+        [self.tasksKeys removeObjectAtIndex:0];
+
     }
     
 }
@@ -162,15 +176,21 @@ static void Callback(CFRunLoopObserverRef observer, CFRunLoopActivity activity, 
     
     
     //【实现方法1   耗时操作!!!  丢给每一次RunLoop循环!!!】
-    [self addTask:^{
+    [self addTask:^BOOL{
         [ViewController addImg1WithCell:cell];
-    }];
-    [self addTask:^{
+        return YES;
+    } withKey:indexPath];
+    
+    [self addTask:^BOOL{
         [ViewController addImg2WithCell:cell];
-    }];
-    [self addTask:^{
+        return YES;
+    } withKey:indexPath];
+    
+    [self addTask:^BOOL{
         [ViewController addImg3WithCell:cell];
-    }];
+        return YES;
+    } withKey:indexPath];
+
     
     //【实现方法2  最传统的方法一个一个的添加】
     //模拟每次取出来的都是不同的照片
