@@ -55,17 +55,26 @@ typedef BOOL(^RunloopBlock)(void);
     //每隔0.001s定时器走一次，runloop的监听也会持续的走下去。
     //不是一个很完美的解决方法。
     _timer = [NSTimer scheduledTimerWithTimeInterval:0.001 target:self selector:@selector(timerMethod) userInfo:nil repeats:YES];
+    
+//    _maxQueueLength = 18;
+    
+    _maxQueueLength = 50;
 
-    _maxQueueLength = 18;
     _tasks = [NSMutableArray array];
     
+    [self addRunloopObserver];
+
+    
     self.exampleTableView = [UITableView new];
+    [self.exampleTableView registerClass:[SpaceCell class] forCellReuseIdentifier:IDENTIFIER];
+
     self.exampleTableView.delegate = self;
     self.exampleTableView.dataSource = self;
     self.exampleTableView.frame = self.view.bounds;
+    
+    
     [self.view addSubview:self.exampleTableView];
     
-    [self addRunloopObserver];
 
 }
 
@@ -123,6 +132,7 @@ static void Callback(CFRunLoopObserverRef observer, CFRunLoopActivity activity, 
     [self.tasks addObject:unit];
     [self.tasksKeys addObject:key];
 
+    
    //保证之前没有显示出来的任务。不再浪费时间加载
     if (self.tasks.count > self.maxQueueLength ) {
         [self.tasks removeObjectAtIndex:0];
@@ -176,21 +186,23 @@ static void Callback(CFRunLoopObserverRef observer, CFRunLoopActivity activity, 
     
     
     //【实现方法1   耗时操作!!!  丢给每一次RunLoop循环!!!】
+
     [self addTask:^BOOL{
         [ViewController addImg1WithCell:cell];
         return YES;
     } withKey:indexPath];
-    
+
     [self addTask:^BOOL{
         [ViewController addImg2WithCell:cell];
         return YES;
     } withKey:indexPath];
-    
+
     [self addTask:^BOOL{
         [ViewController addImg3WithCell:cell];
         return YES;
     } withKey:indexPath];
 
+    
     
     //【实现方法2  最传统的方法一个一个的添加】
     //模拟每次取出来的都是不同的照片
